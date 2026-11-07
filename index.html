@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Registro ore</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #ffffff; --text: #1d2330; --muted: #6b7384;
+    --line: #e3e6ec; --accent: #2f6fed; --accent-text: #ffffff;
+    --danger: #c93a3a; --ok: #1f8a4c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1c2029; --text: #e8eaf0; --muted: #98a0b3;
+      --line: #2b3140; --accent: #5b8cff; --accent-text: #0d1117;
+      --danger: #ff7a7a; --ok: #52c585;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 16px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 16px; margin-bottom: 14px;
+  }
+  h1 { font-size: 20px; margin: 0; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input, select, textarea {
+    width: 100%; padding: 11px 12px; font: inherit; color: var(--text);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button {
+    font: inherit; cursor: pointer; border: 0; border-radius: 10px;
+    padding: 11px 16px; background: var(--accent); color: var(--accent-text); font-weight: 600;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  button.ghost { background: transparent; color: var(--accent); padding: 8px 10px; font-weight: 500; }
+  button.del { background: transparent; color: var(--danger); padding: 6px 8px; font-weight: 500; }
+  button.full { width: 100%; margin-top: 14px; }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; min-width: 0; }
+  .time-wrap { position: relative; }
+  .time-wrap button {
+    position: absolute; right: 4px; top: 4px; padding: 7px 10px; font-size: 13px;
+    background: var(--card); color: var(--accent); border: 1px solid var(--line);
+  }
+  .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .who { color: var(--muted); font-size: 14px; }
+  .month { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .month strong { text-transform: capitalize; font-size: 17px; }
+  .big { font-size: 36px; font-weight: 700; line-height: 1.1; }
+  .big small { font-size: 16px; font-weight: 500; color: var(--muted); }
+  .sub { color: var(--muted); font-size: 14px; }
+  .line { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+  .line:first-child { border-top: 0; }
+  .list { list-style: none; margin: 0; padding: 0; }
+  .item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .item:first-child { border-top: 0; }
+  .item .main { min-width: 0; }
+  .item .t { font-weight: 600; }
+  .item .n { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+  .right { text-align: right; white-space: nowrap; }
+  .msg { margin-top: 10px; font-size: 14px; min-height: 20px; }
+  .msg.err { color: var(--danger); }
+  .msg.ok { color: var(--ok); }
+  .empty { color: var(--muted); text-align: center; padding: 8px 0; }
+  .total { font-weight: 700; }
+  #login { margin-top: 12vh; }
+  #pin { text-align: center; font-size: 24px; letter-spacing: 6px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <section id="login" class="card" hidden>
+    <h1>Registro ore</h1>
+    <p class="sub">Inserisci il tuo PIN per accedere.</p>
+    <form id="loginForm">
+      <input id="pin" type="password" inputmode="numeric" autocomplete="current-password"
+             maxlength="8" placeholder="••••" aria-label="PIN">
+      <button class="full" id="loginBtn" type="submit">Entra</button>
+      <div class="msg" id="loginMsg" role="alert"></div>
+    </form>
+  </section>
+
+  <!-- APP -->
+  <section id="app" hidden>
+    <div class="head">
+      <div>
+        <h1>Registro ore</h1>
+        <div class="who" id="who"></div>
+      </div>
+      <button class="ghost" id="logoutBtn" type="button">Esci</button>
+    </div>
+
+    <div class="month">
+      <button class="ghost" id="prevM" type="button" aria-label="Mese precedente">‹ Prec.</button>
+      <strong id="monthLabel"></strong>
+      <button class="ghost" id="nextM" type="button" aria-label="Mese successivo">Succ. ›</button>
+    </div>
+
+    <!-- Riepilogo -->
+    <div class="card">
+      <h2>Riepilogo del mese</h2>
+      <div class="big"><span id="totH">0</span> <small>ore</small></div>
+      <div id="summary" style="margin-top:10px"></div>
+      <div id="costBox" hidden style="margin-top:10px">
+        <div class="line"><span>Costo ore</span><span id="totCost"></span></div>
+        <div class="line"><span>Spese</span><span id="totSpese"></span></div>
+        <div class="line total"><span>Totale</span><span id="totAll"></span></div>
+      </div>
+    </div>
+
+    <!-- Nuovo turno -->
+    <div class="card">
+      <h2>Aggiungi turno</h2>
+      <form id="oreForm">
+        <div id="workerBox" hidden>
+          <label for="worker">Lavoratrice</label>
+          <select id="worker"></select>
+        </div>
+        <label for="oDate">Data</label>
+        <input id="oDate" type="date" required>
+        <div class="row">
+          <div>
+            <label for="oStart">Inizio</label>
+            <div class="time-wrap">
+              <input id="oStart" type="time" required>
+              <button type="button" data-now="oStart">Ora</button>
+            </div>
+          </div>
+          <div>
+            <label for="oEnd">Fine</label>
+            <div class="time-wrap">
+              <input id="oEnd" type="time" required>
+              <button type="button" data-now="oEnd">Ora</button>
+            </div>
+          </div>
+        </div>
+        <label for="oNote">Nota (facoltativa)</label>
+        <input id="oNote" type="text" maxlength="200">
+        <button class="full" id="oreBtn" type="submit">Salva turno</button>
+        <div class="msg" id="oreMsg" role="status"></div>
+      </form>
+    </div>
+
+    <!-- Elenco turni -->
+    <div class="card">
+      <h2>Turni del mese</h2>
+      <ul class="list" id="oreList"></ul>
+    </div>
+
+    <!-- Spese (solo admin) -->
+    <div id="speseSection" hidden>
+      <div class="card">
+        <h2>Aggiungi spesa</h2>
+        <form id="speseForm">
+          <label for="sDate">Data</label>
+          <input id="sDate" type="date" required>
+          <label for="sDesc">Descrizione</label>
+          <input id="sDesc" type="text" maxlength="100" placeholder="Es. prodotti per la pulizia" required>
+          <label for="sAmount">Importo (€)</label>
+          <input id="sAmount" type="number" inputmode="decimal" step="0.01" min="0.01" required>
+          <label for="sNote">Nota (facoltativa)</label>
+          <input id="sNote" type="text" maxlength="200">
+          <button class="full" id="speseBtn" type="submit">Salva spesa</button>
+          <div class="msg" id="speseMsg" role="status"></div>
+        </form>
+      </div>
+      <div class="card">
+        <h2>Spese del mese</h2>
+        <ul class="list" id="speseList"></ul>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+// >>> Dopo aver pubblicato Apps Script, incolla qui l'URL dell'app web (termina con /exec)
+const API_URL = 'https://script.google.com/macros/s/AKfycbwC8uqQpP5R7LHwSvBBMsaJe8dQ1gJ7K9ECAbYIXZgh91MCvRlxXQ_HeXGUE32YrTvh9g/exec';
+
+const $ = (id) => document.getElementById(id);
+const eur = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
+const fmtH = (n) => Number(n).toLocaleString('it-IT', { maximumFractionDigits: 2 });
+const todayLocal = () => new Date().toLocaleDateString('sv-SE'); // yyyy-mm-dd
+const nowHHMM = () => new Date().toTimeString().slice(0, 5);
+
+let session = loadSession();
+let month = todayLocal().slice(0, 7);
+let data = null;
+
+function loadSession() {
+  try { return JSON.parse(localStorage.getItem('session') || 'null'); } catch (e) { return null; }
+}
+function saveSession(s) {
+  session = s;
+  try {
+    if (s) localStorage.setItem('session', JSON.stringify(s));
+    else localStorage.removeItem('session');
+  } catch (e) { /* storage non disponibile: la sessione dura finché la pagina resta aperta */ }
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function setMsg(id, text, kind) {
+  const el = $(id);
+  el.textContent = text || '';
+  el.className = 'msg' + (kind ? ' ' + kind : '');
+}
+
+async function api(action, payload) {
+  if (!/^https:\/\/script\.google\.com\//.test(API_URL)) {
+    throw new Error("URL dell'app non configurato (vedi README, passo 5)");
+  }
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    // text/plain evita la richiesta preliminare CORS, che Apps Script non supporta
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(Object.assign({ action, token: session && session.token }, payload || {}))
+  });
+  const json = await res.json();
+  if (json.auth) { saveSession(null); showLogin('Sessione scaduta, rientra con il PIN'); }
+  return json;
+}
+
+/* ---------- Schermate ---------- */
+
+function showLogin(msg) {
+  $('app').hidden = true;
+  $('login').hidden = false;
+  $('pin').value = '';
+  setMsg('loginMsg', msg || '', msg ? 'err' : '');
+}
+
+function showApp() {
+  $('login').hidden = true;
+  $('app').hidden = false;
+  $('who').textContent = session.name + (session.role === 'admin' ? ' · amministratore' : '');
+  $('workerBox').hidden = session.role !== 'admin';
+  $('speseSection').hidden = session.role !== 'admin';
+  if (!$('oDate').value) $('oDate').value = todayLocal();
+  if (!$('sDate').value) $('sDate').value = todayLocal();
+  refresh();
+}
+
+/* ---------- Dati ---------- */
+
+async function refresh() {
+  try {
+    const r = await api('list', { month });
+    if (!r.ok) { if (!r.auth) setMsg('oreMsg', r.error, 'err'); return; }
+    data = r;
+    render();
+  } catch (e) {
+    setMsg('oreMsg', e.message || 'Errore di rete', 'err');
+  }
+}
+
+function render() {
+  const [y, m] = month.split('-').map(Number);
+  $('monthLabel').textContent = new Date(y, m - 1, 1)
+    .toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+  $('totH').textContent = fmtH(data.totalHours);
+
+  const isAdmin = data.role === 'admin';
+
+  $('summary').innerHTML = data.summary.length
+    ? data.summary.map((s) =>
+        `<div class="line"><span>${esc(s.name)} <span class="sub">· ${s.days} giorni</span></span>` +
+        `<span>${fmtH(s.hours)} h${isAdmin ? ' · ' + eur.format(s.cost) : ''}</span></div>`).join('')
+    : '<div class="empty">Nessun turno registrato</div>';
+
+  $('costBox').hidden = !isAdmin;
+  if (isAdmin) {
+    $('totCost').textContent = eur.format(data.totalCost);
+    $('totSpese').textContent = eur.format(data.totalSpese);
+    $('totAll').textContent = eur.format(data.totalAll);
+    const sel = $('worker');
+    const prev = sel.value;
+    sel.innerHTML = data.workers.map((w) => `<option>${esc(w)}</option>`).join('');
+    if (data.workers.includes(prev)) sel.value = prev;
+  }
+
+  $('oreList').innerHTML = data.ore.length
+    ? data.ore.map((o) =>
+        `<li class="item"><div class="main">` +
+        `<div class="t">${fmtDay(o.date)} · ${esc(o.start)}–${esc(o.end)}</div>` +
+        `<div class="n">${isAdmin ? esc(o.name) + (o.note ? ' · ' : '') : ''}${esc(o.note)}</div></div>` +
+        `<div class="right"><strong>${fmtH(o.hours)} h</strong>` +
+        (o.canDelete ? `<br><button class="del" data-del-ore="${esc(o.id)}" type="button">Elimina</button>` : '') +
+        `</div></li>`).join('')
+    : '<li class="empty">Nessun turno</li>';
+
+  if (isAdmin) {
+    $('speseList').innerHTML = data.spese.length
+      ? data.spese.map((s) =>
+          `<li class="item"><div class="main">` +
+          `<div class="t">${esc(s.description)}</div>` +
+          `<div class="n">${fmtDay(s.date)}${s.note ? ' · ' + esc(s.note) : ''}</div></div>` +
+          `<div class="right"><strong>${eur.format(s.amount)}</strong><br>` +
+          `<button class="del" data-del-spesa="${esc(s.id)}" type="button">Elimina</button></div></li>`).join('')
+      : '<li class="empty">Nessuna spesa</li>';
+  }
+}
+
+function fmtDay(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+/* ---------- Eventi ---------- */
+
+$('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('loginBtn');
+  btn.disabled = true;
+  setMsg('loginMsg', 'Controllo…');
+  try {
+    const r = await api('login', { pin: $('pin').value });
+    if (r.ok) {
+      saveSession({ token: r.token, name: r.name, role: r.role });
+      showApp();
+    } else if (!r.auth) {
+      setMsg('loginMsg', r.error, 'err');
+    }
+  } catch (err) {
+    setMsg('loginMsg', err.message || 'Errore di rete', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$('logoutBtn').addEventListener('click', () => { saveSession(null); showLogin(); });
+
+function shiftMonth(delta) {
+  const [y, m] = month.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  month = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  refresh();
+}
+$('prevM').addEventListener('click', () => shiftMonth(-1));
+$('nextM').addEventListener('click', () => shiftMonth(1));
+
+document.querySelectorAll('[data-now]').forEach((b) =>
+  b.addEventListener('click', () => { $(b.dataset.now).value = nowHHMM(); }));
+
+$('oreForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('oreBtn');
+  btn.disabled = true;
+  setMsg('oreMsg', 'Salvataggio…');
+  try {
+    const r = await api('addOre', {
+      name: $('worker').value, date: $('oDate').value,
+      start: $('oStart').value, end: $('oEnd').value, note: $('oNote').value
+    });
+    if (r.ok) {
+      setMsg('oreMsg', 'Turno salvato ✓', 'ok');
+      $('oStart').value = ''; $('oEnd').value = ''; $('oNote').value = '';
+      const saved = $('oDate').value.slice(0, 7);
+      if (saved !== month) month = saved;
+      refresh();
+    } else if (!r.auth) {
+      setMsg('oreMsg', r.error, 'err');
+    }
+  } catch (err) {
+    setMsg('oreMsg', err.message || 'Errore di rete', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$('speseForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('speseBtn');
+  btn.disabled = true;
+  setMsg('speseMsg', 'Salvataggio…');
+  try {
+    const r = await api('addSpesa', {
+      date: $('sDate').value, description: $('sDesc').value,
+      amount: $('sAmount').value, note: $('sNote').value
+    });
+    if (r.ok) {
+      setMsg('speseMsg', 'Spesa salvata ✓', 'ok');
+      $('sDesc').value = ''; $('sAmount').value = ''; $('sNote').value = '';
+      const saved = $('sDate').value.slice(0, 7);
+      if (saved !== month) month = saved;
+      refresh();
+    } else if (!r.auth) {
+      setMsg('speseMsg', r.error, 'err');
+    }
+  } catch (err) {
+    setMsg('speseMsg', err.message || 'Errore di rete', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.addEventListener('click', async (e) => {
+  const ore = e.target.closest('[data-del-ore]');
+  const spesa = e.target.closest('[data-del-spesa]');
+  if (!ore && !spesa) return;
+  if (!confirm('Eliminare questa voce?')) return;
+  e.target.disabled = true;
+  try {
+    const r = ore
+      ? await api('deleteOre', { id: ore.dataset.delOre })
+      : await api('deleteSpesa', { id: spesa.dataset.delSpesa });
+    if (!r.ok && !r.auth) alert(r.error);
+  } catch (err) {
+    alert(err.message || 'Errore di rete');
+  }
+  refresh();
+});
+
+/* ---------- Avvio ---------- */
+if (session && session.token) showApp(); else showLogin();
+</script>
+</body>
+</html>
